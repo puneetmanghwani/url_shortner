@@ -7,15 +7,17 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
 const pino = require('pino');
-const expressPino = require('express-pino-logger');
+
 const urlRoutes = require('./routes/urlShorten');
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
-const expressLogger = expressPino({ logger });
 
 const app = express();
 app.use(cors());
-app.use(expressLogger);
+app.use((req, res, done) => {
+  logger.info(req.originalUrl);
+  done();
+});
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
@@ -24,14 +26,14 @@ app.use(cookieParser());
 app.use('/api', urlRoutes);
 
 const { mongoURI, serverPort } = process.env;
-logger.info('Running on %d', serverPort);
 mongoose
   .connect(
-    mongoURI, { useNewUrlParser: true, useUnifiedTopology: true },
+    mongoURI, { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true },
   )
   .then(() => {
+    logger.info('Server Started On Port : %d', serverPort);
     app.listen(serverPort);
   })
   .catch((err) => {
-    console.log(err);
+    throw err;
   });

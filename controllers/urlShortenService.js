@@ -1,33 +1,63 @@
+const pino = require('pino');
+
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
+
 const Url = require('../models/Url');
 const urlUtil = require('../utils/urlUtil');
 
 exports.shortOriginalUrl = async (req, res) => {
-  // eslint-disable-next-line no-var
   var { originalUrl, urlCode } = req.body;
 
+  logger.info(`Generating Short Url Code for ${originalUrl} with urlCode given by user: ${urlCode}`);
+
+  // Checking if the url given by user is valid.
   if (urlUtil.isValidUrl(originalUrl) === false) {
+    logger.error(`Orginal Url : ${originalUrl} is not a valid url`);
+
     return res.status(400).json('Invalid Url Format');
   }
 
+  // If url code is not given by user then generate it.
   if (urlCode === undefined) {
-    urlCode = urlUtil.uniqueCodeGenerate();
+    // urlCode = urlUtil.uniqueCodeGenerateByNanoId();
+    urlCode = urlUtil.uniqueCodeGenerateManually();
+
+    // eslint-disable-next-line vars-on-top
+    var existingUrlCode = await Url.findOne({ urlCode });
+
+    // Generate a new url code till it is not present in database.
+    while (existingUrlCode !== null) {
+      urlCode = urlUtil.uniqueCodeGenerateManually();
+
+      // eslint-disable-next-line no-await-in-loop
+      existingUrlCode = await Url.findOne({ urlCode });
+    }
   }
 
   try {
     const existingUrl = await Url.findOne({ urlCode });
 
+    // If url code given by user exists in database.
     if (existingUrl !== null) {
+      logger.error(`Url Code: ${urlCode} already taken`);
+
       return res.status(400).json('Url Code Already Taken');
     }
 
     const urlToBeShortened = { originalUrl, urlCode };
+
     const url = new Url(urlToBeShortened);
     const generatedUrl = await url.save();
+
+    logger.info(`Short Url Code generated for ${originalUrl} with urlCode: ${urlCode}`);
+
     return res.status(201).json({
       generatedUrl,
     });
   } catch (err) {
     // TODO: Error handling for error.
+    logger.error('Problem Occurred');
+
     return res.status(500).json('Internal Server Error');
   }
 };
@@ -35,19 +65,28 @@ exports.shortOriginalUrl = async (req, res) => {
 exports.getOriginalUrl = async (req, res) => {
   try {
     const { urlCode } = req.params;
+
+    logger.info(`Finding original url for Url Code - ${urlCode}`);
+
     const url = await Url.findOne({ urlCode });
 
     if (url === null) {
+      logger.error(`No Url found for Url Code - ${urlCode}`);
       // TODO: Redirect to a error page.
     }
 
     url.count += 1;
     await url.save();
+
     const { originalUrl } = url;
+
+    logger.info(`Original Url found for Url Code - ${urlCode}`);
 
     return res.redirect(originalUrl);
   } catch (err) {
     // TODO: Error handling for error.
+    logger.error('Problem Occurred');
+
     return res.status(500).json('Internal Server Error');
   }
 };

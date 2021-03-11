@@ -7,19 +7,19 @@ const Url = require('../models/Url');
 const urlUtil = require('../utils/urlUtil');
 
 exports.shortOriginalUrl = async (req, res) => {
-  var { originalUrl, urlCode } = req.body;
+  var { originalUrl, urlCode } = req.body.params;
 
   logger.info(`Generating Short Url Code for ${originalUrl} with urlCode given by user: ${urlCode}`);
 
   // Checking if the url given by user is valid.
   if (urlUtil.isValidUrl(originalUrl) === false) {
-    logger.error(`Orginal Url : ${originalUrl} is not a valid url`);
+    logger.error(`Orginal Url : ${originalUrl} .It is not a valid url.`);
 
     return res.status(400).json('Invalid Url Format');
   }
 
   // If url code is not given by user then generate it.
-  if (urlCode === undefined) {
+  if (urlCode === undefined || urlCode.length === 0) {
     // urlCode = urlUtil.uniqueCodeGenerateByNanoId();
     urlCode = urlUtil.uniqueCodeGenerateManually();
 
@@ -48,12 +48,12 @@ exports.shortOriginalUrl = async (req, res) => {
     const urlToBeShortened = { originalUrl, urlCode };
 
     const url = new Url(urlToBeShortened);
-    const generatedUrl = await url.save();
+    const urlData = await url.save();
 
     logger.info(`Short Url Code generated for ${originalUrl} with urlCode: ${urlCode}`);
 
     return res.status(201).json({
-      generatedUrl,
+      urlData,
     });
   } catch (err) {
     logger.error('Problem Occurred');
@@ -65,7 +65,6 @@ exports.shortOriginalUrl = async (req, res) => {
 exports.getOriginalUrl = async (req, res) => {
   try {
     const { urlCode } = req.params;
-
     logger.info(`Finding original url for Url Code - ${urlCode}`);
 
     const url = await Url.findOne({ urlCode });

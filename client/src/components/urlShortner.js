@@ -29,7 +29,7 @@ function UrlShortner(props) {
         api
         .generateShortUrl(formData)
         .then(( { data } ) => {
-            const shortUrl = 'http://52.170.145.190/'+data.urlData.urlCode;
+            const shortUrl = 'http://puneet.gotdns.ch/'+data.urlData.urlCode;
             setState({
                 ...state,
                 shortUrl,

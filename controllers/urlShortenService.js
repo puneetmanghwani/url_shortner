@@ -1,4 +1,5 @@
 const pino = require('pino');
+const path = require('path');
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
@@ -55,7 +56,6 @@ exports.shortOriginalUrl = async (req, res) => {
       generatedUrl,
     });
   } catch (err) {
-    // TODO: Error handling for error.
     logger.error('Problem Occurred');
 
     return res.status(500).json('Internal Server Error');
@@ -72,7 +72,8 @@ exports.getOriginalUrl = async (req, res) => {
 
     if (url === null) {
       logger.error(`No Url found for Url Code - ${urlCode}`);
-      // TODO: Redirect to a error page.
+
+      return res.sendFile(path.resolve('templates', '404.html'));
     }
 
     url.count += 1;
@@ -84,7 +85,6 @@ exports.getOriginalUrl = async (req, res) => {
 
     return res.redirect(originalUrl);
   } catch (err) {
-    // TODO: Error handling for error.
     logger.error('Problem Occurred');
 
     return res.status(500).json('Internal Server Error');
